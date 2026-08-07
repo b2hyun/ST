@@ -40,7 +40,7 @@ JAW_L, JAW_W, JAW_H = 16.0, 24.0, 20.0  # orange jaw body
 NOSE_L, NOSE_W = 8.0, 10.0              # jaw nose toward the sample
 GAP_OPEN = 8.0            # open sample gap (sample 7 + 1 clearance)
 BLUE_X0 = JAW_X0 + JAW_L + NOSE_L + GAP_OPEN
-SPRING_Y = 8.0                          # springs at y = +/- SPRING_Y
+SPRING_Y = 0.0                          # one light spring per side, on centre
 
 # ---- tool parameters --------------------------------------------------------
 FIT_CLR = 0.1                 # form-fit clearance of the hook pockets
@@ -95,7 +95,7 @@ def make_spring(x_start, length, radius=2.5, wire_r=0.6, turns=5, y=0.0, z=10.0)
 # inset by the wire radius so the coil ends don't cross the contact faces
 _s0 = BAR_HALF + 0.6 + 0.1
 _slen = SPRING_GAP - 2 * (0.6 + 0.1)
-springs_r = make_spring(_s0, _slen, y=SPRING_Y).union(make_spring(_s0, _slen, y=-SPRING_Y))
+springs_r = make_spring(_s0, _slen, y=SPRING_Y)
 
 # ---- tool: carriers with form-fitted corner hooks ---------------------------
 # Each hook is an L-shaped blade (in plan) wrapping one outer corner of the
