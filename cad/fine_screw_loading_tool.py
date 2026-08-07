@@ -2,20 +2,25 @@
 #
 # Context: the fixture is a C-frame with a fixed centre bar. On each side an
 # orange jaw is pushed OUTWARD by springs, clamping a 7x7 mm sample between the
-# jaw nose and the outer blue jaw. The purple loading tool sits on top of one
-# jaw pair: its downward pins drop into engagement sockets on the orange jaws,
-# and a fine-pitch screw with opposed (LH/RH) threads pulls both jaws inward,
-# compressing the springs and opening both sample gaps. Reversing the screw
-# slowly releases the springs so the samples are clamped gently.
+# jaw nose and the outer blue jaw. The purple loading tool is dropped in from
+# above through the fixture's thickness: each carrier has two L-shaped hook
+# shoes whose pockets are form-fitted to the outer corners of an orange jaw
+# (the four yellow-highlighted engagement spots). A fine-pitch screw with
+# opposed (LH/RH) threads then pulls both carriers - and with them both jaws -
+# inward from both sides, compressing the springs and opening both sample
+# gaps. Reversing the screw slowly releases the springs so the samples are
+# clamped gently, after which the tool lifts straight out.
 #
-# The model is positioned in the ENGAGED state: jaws pulled inward, springs
-# compressed, both sample gaps open with samples inserted.
+# The model is positioned in the ENGAGED state: tool fitted, jaws pulled
+# inward, springs compressed, both sample gaps open with samples inserted.
 #
-# Improvements over the sketch:
-#   - two pins per carrier (4 total) so screw torque cannot rotate the tool
-#   - square guide spine between the carriers keeps the pins aligned while
-#     the tool is handled and carries the screw torque reaction
-#   - chamfered pin tips + 0.1 mm radial socket clearance for easy drop-in
+# Design details:
+#   - hook shoes wrap each jaw corner on two faces (outer shoulder + side)
+#     with 0.1 mm fit clearance, so the tool self-locates when dropped in
+#     and the corner pockets react the screw torque
+#   - the shoulder faces beside the jaw nose are the pulling surfaces; the
+#     hooks pass beside the sample gap without touching sample or outer jaw
+#   - square guide spine keeps the carriers aligned while handled
 #   - 12-flat knob for controlled slow release
 #
 # Threads are not modeled (cosmetic in STEP); recommended: M5x0.5, RH on one
@@ -35,14 +40,14 @@ JAW_L, JAW_W, JAW_H = 16.0, 24.0, 20.0  # orange jaw body
 NOSE_L, NOSE_W = 8.0, 10.0              # jaw nose toward the sample
 GAP_OPEN = 8.0            # open sample gap (sample 7 + 1 clearance)
 BLUE_X0 = JAW_X0 + JAW_L + NOSE_L + GAP_OPEN
-SOCKET_D, SOCKET_DEPTH = 4.2, 6.0
-SOCKET_X = JAW_X0 + JAW_L / 2           # socket centre over jaw body
-SOCKET_Y = 8.0                          # sockets at y = +/- SOCKET_Y
+SPRING_Y = 8.0                          # springs at y = +/- SPRING_Y
 
 # ---- tool parameters --------------------------------------------------------
-PIN_D = 4.0
+FIT_CLR = 0.1                 # form-fit clearance of the hook pockets
+HOOK_T = 3.5                  # hook blade thickness
+HOOK_Z0 = 8.0                 # hooks reach down to this height
 CAR_X0, CAR_X1 = 8.0, 28.0    # right carrier footprint
-CAR_W, CAR_Z0, CAR_Z1 = 30.0, 20.5, 34.0
+CAR_W, CAR_Z0, CAR_Z1 = 32.0, 20.5, 34.0
 SCREW_D, SCREW_Z = 5.0, 29.0
 SPINE, SPINE_Y = 6.0, 10.0    # square guide spine, offset from screw axis
 
@@ -62,12 +67,8 @@ jaw_r = (
         .box(NOSE_L, NOSE_W, JAW_H, centered=(True, True, False))
     )
 )
-for sy in (1, -1):  # engagement sockets for the tool pins
-    jaw_r = jaw_r.cut(
-        cq.Workplane("XY", origin=(SOCKET_X, sy * SOCKET_Y, JAW_H - SOCKET_DEPTH))
-        .circle(SOCKET_D / 2)
-        .extrude(SOCKET_DEPTH + 1)
-    )
+# the two outer corners beside the nose (the yellow spots) are the
+# engagement shoulders the tool hooks fit onto - no extra features needed
 
 # ---- fixture: blue outer jaw + sample ---------------------------------------
 blue_jaw_r = (
@@ -94,21 +95,33 @@ def make_spring(x_start, length, radius=2.5, wire_r=0.6, turns=5, y=0.0, z=10.0)
 # inset by the wire radius so the coil ends don't cross the contact faces
 _s0 = BAR_HALF + 0.6 + 0.1
 _slen = SPRING_GAP - 2 * (0.6 + 0.1)
-springs_r = make_spring(_s0, _slen, y=SOCKET_Y).union(make_spring(_s0, _slen, y=-SOCKET_Y))
+springs_r = make_spring(_s0, _slen, y=SPRING_Y).union(make_spring(_s0, _slen, y=-SPRING_Y))
 
-# ---- tool: carriers with downward pins --------------------------------------
+# ---- tool: carriers with form-fitted corner hooks ---------------------------
+# Each hook is an L-shaped blade (in plan) wrapping one outer corner of the
+# jaw body: the blade in front of the shoulder face (beside the nose) is the
+# pulling surface, the blade along the jaw side locates the fit.
+SHOULDER_X = JAW_X0 + JAW_L            # jaw body outer face
 carrier_r = (
     cq.Workplane("XY", origin=((CAR_X0 + CAR_X1) / 2, 0, CAR_Z0))
     .box(CAR_X1 - CAR_X0, CAR_W, CAR_Z1 - CAR_Z0, centered=(True, True, False))
 )
 for sy in (1, -1):
-    pin = (
-        cq.Workplane("XY", origin=(SOCKET_X, sy * SOCKET_Y, JAW_H - 5.0))
-        .circle(PIN_D / 2)
-        .extrude(CAR_Z0 - (JAW_H - 5.0))
-        .faces("<Z").chamfer(0.8)
+    y_in = NOSE_W / 2 + 0.5            # clear of the nose
+    y_out = JAW_W / 2 + FIT_CLR
+    shoulder_blade = (
+        cq.Workplane("XY", origin=(SHOULDER_X + FIT_CLR + HOOK_T / 2,
+                                   sy * (y_in + y_out) / 2, HOOK_Z0))
+        .box(HOOK_T, y_out - y_in, CAR_Z0 - HOOK_Z0 + 0.1,
+             centered=(True, True, False))
     )
-    carrier_r = carrier_r.union(pin)
+    side_blade = (
+        cq.Workplane("XY", origin=((CAR_X0 + SHOULDER_X + FIT_CLR + HOOK_T) / 2,
+                                   sy * (y_out + HOOK_T / 2), HOOK_Z0))
+        .box(SHOULDER_X + FIT_CLR + HOOK_T - CAR_X0, HOOK_T,
+             CAR_Z0 - HOOK_Z0 + 0.1, centered=(True, True, False))
+    )
+    carrier_r = carrier_r.union(shoulder_blade).union(side_blade)
 # screw hole (tapped; LH on this carrier, RH on the mirrored one)
 carrier_r = carrier_r.cut(
     cq.Workplane("YZ", origin=(CAR_X0 - 1, 0, SCREW_Z))
