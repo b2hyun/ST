@@ -30,33 +30,43 @@
 import cadquery as cq
 
 # ---- fixture parameters (X = clamp axis, Y = along centre bar, Z = up) ------
-SAMPLE = 7.0
-SAMPLE_T = 7.0            # sample thickness along clamp axis
-BAR_HALF = 4.0            # centre bar half-thickness
-BAR_H = 25.0
-SPRING_GAP = 6.0          # bar-to-jaw gap in compressed (engaged) state
+#
+# MEASURED (from the 3 / 4 / 3 sketch): across the face the tool engages, the
+# jaw is 3 + 4 + 3 = 10 mm - a 4 mm nose with a 3 mm shoulder either side.
+# Those two 3 mm shoulders are the tool's push faces.
+#
+# ASSUMED, still to be measured: jaw length and height, nose length, centre
+# bar and spring gap - scaled to suit the 10 mm width. Sample thickness is
+# taken as a thin wafer coupon (7x7 mm face, ~1 mm thick), which is what sets
+# the stroke; if the coupons are actually 7 mm thick, raise SAMPLE_T and the
+# whole travel grows with it.
+SAMPLE = 7.0              # coupon face, 7 x 7 mm
+SAMPLE_T = 1.0            # ASSUMED coupon thickness, along the clamp axis
+BAR_HALF = 2.0            # ASSUMED centre bar half-thickness
+BAR_H = 10.0
+SPRING_GAP = 3.0          # ASSUMED bar-to-jaw gap when compressed
 JAW_X0 = BAR_HALF + SPRING_GAP          # orange jaw inner face
-JAW_L, JAW_W, JAW_H = 16.0, 24.0, 20.0  # orange jaw body
-NOSE_L, NOSE_W = 8.0, 10.0              # jaw nose toward the sample
-GAP_OPEN = 8.0            # open sample gap (sample 7 + 1 clearance)
+JAW_L, JAW_W, JAW_H = 7.0, 10.0, 8.0    # W = 3+4+3 MEASURED; L, H assumed
+NOSE_L, NOSE_W = 3.5, 4.0               # NOSE_W = 4 MEASURED; length assumed
+GAP_OPEN = SAMPLE_T + 1.0  # open sample gap = coupon + clearance
 BLUE_X0 = JAW_X0 + JAW_L + NOSE_L + GAP_OPEN
 SPRING_Y = 0.0                          # one light spring per side, on centre
 
 # ---- tool parameters --------------------------------------------------------
 FIT_CLR = 0.1                 # form-fit clearance of the hook pockets
-HOOK_T = 3.5                  # hook blade thickness
-HOOK_Z0 = 8.0                 # hooks reach down to this height
-CAR_X0, CAR_X1 = 8.0, 28.0    # right carrier footprint
-CAR_W, CAR_Z0, CAR_Z1 = 32.0, 20.5, 34.0
-SCREW_D, SCREW_Z = 5.0, 29.0
-SPINE, SPINE_Y = 6.0, 10.0    # square guide spine, offset from screw axis
+HOOK_T = 1.5                  # hook blade thickness
+HOOK_Z0 = 3.0                 # hooks reach down to this height
+CAR_X0, CAR_X1 = 4.0, 13.0    # right carrier footprint
+CAR_W, CAR_Z0, CAR_Z1 = 14.0, 8.5, 14.0
+SCREW_D, SCREW_Z = 3.0, 11.5
+SPINE, SPINE_Y = 3.0, 5.0     # square guide spine, offset from screw axis
 
 # ---- fixture: floor + centre bar --------------------------------------------
 floor = (
-    cq.Workplane("XY", origin=(0, 0, -4))
-    .box(120, 70, 4, centered=(True, True, False))
+    cq.Workplane("XY", origin=(0, 0, -2))
+    .box(56, 28, 2, centered=(True, True, False))
 )
-bar = cq.Workplane("XY").box(2 * BAR_HALF, 60, BAR_H, centered=(True, True, False))
+bar = cq.Workplane("XY").box(2 * BAR_HALF, 24, BAR_H, centered=(True, True, False))
 
 # ---- fixture: orange spring jaw (right; left mirrored) ----------------------
 jaw_r = (
@@ -72,8 +82,8 @@ jaw_r = (
 
 # ---- fixture: blue outer jaw + sample ---------------------------------------
 blue_jaw_r = (
-    cq.Workplane("XY", origin=(BLUE_X0 + 6, 0, 0))
-    .box(12, JAW_W, 18, centered=(True, True, False))
+    cq.Workplane("XY", origin=(BLUE_X0 + 2.5, 0, 0))
+    .box(5, JAW_W, 7, centered=(True, True, False))
 )
 sample_r = (
     cq.Workplane("XY", origin=(BLUE_X0 - GAP_OPEN / 2, 0, 0))
@@ -81,7 +91,7 @@ sample_r = (
 )
 
 # ---- fixture: compressed springs (2 per side) -------------------------------
-def make_spring(x_start, length, radius=2.5, wire_r=0.6, turns=5, y=0.0, z=10.0):
+def make_spring(x_start, length, radius=1.4, wire_r=0.3, turns=5, y=0.0, z=4.0):
     pitch = length / turns
     helix = cq.Wire.makeHelix(pitch, length, radius)
     spring = (
@@ -93,8 +103,8 @@ def make_spring(x_start, length, radius=2.5, wire_r=0.6, turns=5, y=0.0, z=10.0)
     return spring.rotate((0, 0, 0), (0, 1, 0), 90).translate((x_start, y, z))
 
 # inset by the wire radius so the coil ends don't cross the contact faces
-_s0 = BAR_HALF + 0.6 + 0.1
-_slen = SPRING_GAP - 2 * (0.6 + 0.1)
+_s0 = BAR_HALF + 0.3 + 0.05
+_slen = SPRING_GAP - 2 * (0.3 + 0.05)
 springs_r = make_spring(_s0, _slen, y=SPRING_Y)
 
 # ---- tool: carriers with form-fitted corner hooks ---------------------------

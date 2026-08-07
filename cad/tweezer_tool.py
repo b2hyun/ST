@@ -34,21 +34,21 @@ from release_concepts import add_fixture, PURPLE, STEEL
 from fine_screw_loading_tool import JAW_X0, JAW_L, JAW_W, JAW_H, NOSE_W
 
 # ---- what the fixture dictates ----------------------------------------------
-SHOULDER_X = JAW_X0 + JAW_L        # 26 - the face each prong pushes on
-PRONG_Y0 = NOSE_W / 2 + 1.5        # inboard edge, clear of the nose
-PRONG_Y1 = JAW_W / 2 - 1.0         # outboard edge, on the shoulder
-NOTCH_Y = NOSE_W / 2 + 1.0         # half-width of the slot that clears the nose
+SHOULDER_X = JAW_X0 + JAW_L        # the face each prong pushes on
+PRONG_Y0 = NOSE_W / 2 + 0.3        # inboard edge, clear of the nose
+PRONG_Y1 = JAW_W / 2 - 0.2         # outboard edge, on the shoulder
+NOTCH_Y = NOSE_W / 2 + 0.3         # half-width of the slot that clears the nose
 
 # ---- tweezer proportions -----------------------------------------------------
-BLADE_T = 1.5                      # spring thickness (bends in X)
-TIP_W, MID_W, TOP_W = 2 * JAW_W / 2 - 2.0, 12.0, 8.0   # blade width in Y
-TIP_Z0, TIP_Z1 = 4.0, 30.0         # straight tip section
-KNEE = (10.0, 78.0)                # where the taper eases off
-TAIL = (2.0, 106.0)
-TAIL_Z1 = 118.0
+BLADE_T = 0.8                      # spring thickness (bends in X)
+TIP_W, MID_W, TOP_W = JAW_W - 0.4, 5.0, 3.5            # blade width in Y
+TIP_Z0, TIP_Z1 = 1.2, 13.0         # straight tip section
+KNEE = (6.0, 44.0)                 # where the taper eases off
+TAIL = (1.2, 68.0)
+TAIL_Z1 = 78.0
 
-RING_Z0, RING_Z1 = 66.0, 74.0
-FLANGE_T = 1.4                     # side flange that locates the tool in Y
+RING_Z0, RING_Z1 = 36.0, 41.0
+FLANGE_T = 0.6                     # side flange that locates the tool in Y
 
 
 def bar_plate(p0, p1, w, t, y=0.0):
@@ -77,16 +77,16 @@ def make_arm():
     )
     # slot that clears the jaw nose, turning the tip into two prongs
     arm = arm.cut(
-        cq.Workplane("XY", origin=(SHOULDER_X + 4.0, 0, TIP_Z0 - 2.0))
-        .box(12.0, 2 * NOTCH_Y, TIP_Z1 - TIP_Z0, centered=(True, True, False))
+        cq.Workplane("XY", origin=(SHOULDER_X + 2.0, 0, TIP_Z0 - 1.0))
+        .box(6.0, 2 * NOTCH_Y, TIP_Z1 - TIP_Z0, centered=(True, True, False))
     )
     # locating flanges hugging the outside of the jaw
     for sy in (1, -1):
         arm = arm.union(
-            cq.Workplane("XY", origin=(SHOULDER_X - 3.0,
-                                       sy * (JAW_W / 2 + 0.15 + FLANGE_T / 2),
+            cq.Workplane("XY", origin=(SHOULDER_X - 1.4,
+                                       sy * (JAW_W / 2 + 0.12 + FLANGE_T / 2),
                                        TIP_Z0))
-            .box(6.0 + BLADE_T, FLANGE_T, 11.0, centered=(True, True, False))
+            .box(3.0 + BLADE_T, FLANGE_T, 5.0, centered=(True, True, False))
         )
     return arm
 
@@ -113,10 +113,10 @@ def ring_opening_half_x(z):
 _half = ring_opening_half_x(RING_Z0) + 0.15
 ring = (
     cq.Workplane("XY", origin=(0, 0, RING_Z0))
-    .box(2 * _half + 7.0, MID_W + 7.0, RING_Z1 - RING_Z0, centered=(True, True, False))
+    .box(2 * _half + 3.0, MID_W + 3.0, RING_Z1 - RING_Z0, centered=(True, True, False))
     .cut(
         cq.Workplane("XY", origin=(0, 0, RING_Z0 - 1.0))
-        .box(2 * _half, MID_W + 1.0, RING_Z1 - RING_Z0 + 2.0,
+        .box(2 * _half, MID_W + 0.6, RING_Z1 - RING_Z0 + 2.0,
              centered=(True, True, False))
     )
 )
