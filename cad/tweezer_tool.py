@@ -16,13 +16,15 @@
 # thumb allows. That is the controlled release, with no damper, no pawl and
 # no thread: the ring IS the latch and the release valve.
 #
-# Because the tips only push on flat faces, jaw tilt no longer matters - the
-# reason the plier needed parallelogram links was the deep form-fitted pocket,
-# and there isn't one any more. A few degrees of arm flex is harmless.
+# The parallelogram links the plier needed existed only to protect a deep
+# form-fitted pocket from jaw tilt. With the pocket gone, arm flex stops
+# mattering to the ENGAGEMENT - but tilt still matters to the JAW, because it
+# rides on a guide rod and any push above that rod bends it. That is handled
+# by the contact pads below, not by constraining the arms.
 #
 # A small flange on the outside of each prong hugs the jaw's side face, so the
 # tool still drops into place with a definite located feel rather than
-# floating on the shoulder faces.
+# floating on the shoulder faces. The flanges locate only; they carry no load.
 #
 # Everything scales with the fixture: unlike a linkage, a sprung blade has no
 # minimum feature size, so if the real jaws are smaller the whole tool shrinks
@@ -38,6 +40,24 @@ SHOULDER_X = JAW_X0 + JAW_L        # the face each prong pushes on
 PRONG_Y0 = NOSE_W / 2 + 0.3        # inboard edge, clear of the nose
 PRONG_Y1 = JAW_W / 2 - 0.2         # outboard edge, on the shoulder
 NOTCH_Y = NOSE_W / 2 + 0.3         # half-width of the slot that clears the nose
+
+# ---- keeping the jaw parallel: push through the guide rod -------------------
+# The jaw rides on a rod below it. Push ABOVE that rod and the offset turns
+# hand force into a bending moment M = F * h, which flexes the rod and tips
+# the jaw out of parallel - the exact failure this tool exists to prevent.
+#
+# So the prongs do not bear on their whole face. Each carries a small pad
+# standing 0.4 mm proud, centred on the rod axis height, and the rest of the
+# blade clears the jaw. The line of force then runs through the rod axis and
+# the moment goes to zero. A pad also beats a flat face because the arms flex
+# as you squeeze: a flat face's contact patch would creep up or down the jaw
+# and quietly put the moment back, while a pad's stays where it was machined.
+#
+# The two pads per jaw are symmetric about the centre line, so unequal
+# squeezing cannot yaw the jaw about the rod either.
+ROD_Z = 3.0                        # ASSUMED guide rod axis height - MEASURE THIS
+PAD_P = 0.4                        # how far each pad stands proud of the blade
+PAD_W, PAD_H = 1.6, 1.6            # pad footprint on the shoulder face
 
 # ---- tweezer proportions -----------------------------------------------------
 BLADE_T = 0.8                      # spring thickness (bends in X)
@@ -69,7 +89,8 @@ def bar_plate(p0, p1, w, t, y=0.0):
 
 # ---- one arm: straight tip, tapering shank, forked at the bottom ------------
 def make_arm():
-    axis_x = SHOULDER_X + BLADE_T / 2          # inner face lands on the shoulder
+    # blade face stands off by PAD_P; only the pads touch the jaw
+    axis_x = SHOULDER_X + PAD_P + BLADE_T / 2
     arm = (
         bar_plate((axis_x, TIP_Z0), (axis_x, TIP_Z1), BLADE_T, TIP_W)
         .union(bar_plate((axis_x, TIP_Z1), KNEE, BLADE_T, MID_W))
@@ -80,7 +101,15 @@ def make_arm():
         cq.Workplane("XY", origin=(SHOULDER_X + 2.0, 0, TIP_Z0 - 1.0))
         .box(6.0, 2 * NOTCH_Y, TIP_Z1 - TIP_Z0, centered=(True, True, False))
     )
-    # locating flanges hugging the outside of the jaw
+    # contact pads on the rod axis, one per prong
+    for sy in (1, -1):
+        arm = arm.union(
+            cq.Workplane("XY", origin=(SHOULDER_X + PAD_P / 2,
+                                       sy * (PRONG_Y0 + PRONG_Y1) / 2,
+                                       ROD_Z - PAD_H / 2))
+            .box(PAD_P, PAD_W, PAD_H, centered=(True, True, False))
+        )
+    # locating flanges hugging the outside of the jaw (locate only, no load)
     for sy in (1, -1):
         arm = arm.union(
             cq.Workplane("XY", origin=(SHOULDER_X - 1.4,
@@ -104,7 +133,8 @@ tweezer = arm_r.union(arm_l).union(tail)
 def ring_opening_half_x(z):
     """Outer half-span of the two arms at height z, on the tapering shank."""
     f = (z - TIP_Z1) / (KNEE[1] - TIP_Z1)
-    centre = (SHOULDER_X + BLADE_T / 2) + f * (KNEE[0] - (SHOULDER_X + BLADE_T / 2))
+    root = SHOULDER_X + PAD_P + BLADE_T / 2
+    centre = root + f * (KNEE[0] - root)
     return centre + BLADE_T / 2
 
 
@@ -141,3 +171,5 @@ if __name__ == "__main__":
     print(f"tool alone: X {bb.xlen:.0f} x Y {bb.ylen:.0f} x Z {bb.zlen:.0f} mm, 2 parts")
     print(f"prong contact: x = +/-{SHOULDER_X:.0f}, y = +/-{PRONG_Y0:.1f}..{PRONG_Y1:.1f}")
     print(f"blade {BLADE_T} mm thick - spring force is set by this alone")
+    print(f"contact pads at z = {ROD_Z} mm (rod axis), {PAD_W} x {PAD_H} mm, "
+          f"{PAD_P} mm proud - blade clears the jaw everywhere else")
